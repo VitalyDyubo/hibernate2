@@ -6,6 +6,7 @@ import jm.task.core.jdbc.util.Util;
 import org.hibernate.SQLQuery;
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.Transaction;
 import org.hibernate.query.QueryProducer;
 
 import javax.persistence.PersistenceException;
@@ -47,12 +48,16 @@ public class UserDaoHibernateImpl implements UserDao {
 
     @Override
     public void saveUser(String name, String lastName, byte age) {
+        Transaction transaction = null;
         try (SessionFactory sessionFactory = Util.getSessionFactory()) {
             Session session = sessionFactory.getCurrentSession();
-            session.beginTransaction();
+            transaction = session.beginTransaction();
             session.persist(new User(name, lastName, age));
             session.getTransaction().commit();
-        }catch (PersistenceException e) {
+        } catch (PersistenceException e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             System.out.println("Не удалось добавить пользователя");
         }
 
@@ -60,13 +65,17 @@ public class UserDaoHibernateImpl implements UserDao {
 
     @Override
     public void removeUserById(long id) {
+        Transaction transaction = null;
         try (SessionFactory sessionFactory = Util.getSessionFactory()) {
             Session session = sessionFactory.getCurrentSession();
-            session.beginTransaction();
+            transaction = session.beginTransaction();
             User user = session.get(User.class, id);
             session.remove(user);
             session.getTransaction().commit();
         } catch (PersistenceException e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             System.out.println("Не удалось удалить пользователя");
         }
 
@@ -74,13 +83,17 @@ public class UserDaoHibernateImpl implements UserDao {
 
     @Override
     public List<User> getAllUsers() {
+        Transaction transaction = null;
         try (SessionFactory sessionFactory = Util.getSessionFactory()) {
             Session session = sessionFactory.getCurrentSession();
             session.beginTransaction();
             List<User> users = session.createQuery("from User").getResultList();
             session.getTransaction().commit();
             return users;
-        }catch (PersistenceException e) {
+        } catch (PersistenceException e) {
+            if (transaction != null) {
+                transaction.rollback();
+            }
             System.out.println("Не удалось создать список пользователей");
         }
         return null;
@@ -88,12 +101,16 @@ public class UserDaoHibernateImpl implements UserDao {
 
     @Override
     public void cleanUsersTable() {
+        Transaction transaction = null;
         try (SessionFactory sessionFactory = Util.getSessionFactory()) {
             Session session = sessionFactory.getCurrentSession();
             session.beginTransaction();
             session.createQuery("delete from User").executeUpdate();
             session.getTransaction().commit();
         } catch (PersistenceException e) {
+            if (transaction != null){
+                transaction.rollback();
+            }
             System.out.println("Не удалось очистить таблицу");
         }
 
